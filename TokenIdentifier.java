@@ -1,15 +1,13 @@
 public class TokenIdentifier{
-    // Estados: 0=inicio, 1=j, 2=ju, 3=jue, 4=jueg, 5=juego, 6=error
-    // Columnas: j=0, u=1, e=2, g=3, o=4 (resto son error)
-    private static int matriz[][] = {
-        {1, 6, 6, 6, 6},    // Estado 0: espera 'j'
-        {6, 2, 6, 6, 6},    // Estado 1: espera 'u'
-        {6, 6, 3, 6, 6},    // Estado 2: espera 'e'
-        {6, 6, 6, 4, 6},    // Estado 3: espera 'g'
-        {6, 6, 6, 6, 5}     // Estado 4: espera 'o'
+    private int[][] matrizJuego = {
+        {1, 6, 6, 6, 6},
+        {6, 2, 6, 6, 6},
+        {6, 6, 3, 6, 6},
+        {6, 6, 6, 4, 6},
+        {6, 6, 6, 6, 5}
     };
-    
-    private static int obtenerColumna(char letra){
+
+    private int obtenerColumna(char letra){
         switch(letra){
             case 'j': return 0;
             case 'u': return 1;
@@ -17,28 +15,27 @@ public class TokenIdentifier{
             case 'g': return 3;
             case 'o': return 4;
             default: return -1;
-        }
-    }
+        }//switch
+    }//obtenerColumna
 
-    public static boolean esValida(String cadena){
-        String subcadena = cadena.trim();
+    public boolean esPalabra(String palabra){
+        String subcadena = palabra.trim();
         int estado = 0;
-        
-        for(int i = 0; i < subcadena.length(); i++){
+        for(int i = 0; i<subcadena.length(); i++){
             char letra = subcadena.charAt(i);
-            int col = obtenerColumna(letra);
-            
-            if(col == -1 || estado >= 5){
-                return false; // Carácter inválido o ya completó la palabra
+
+            int columna = obtenerColumna(letra);
+
+            if(columna==-1 || estado>=5){
+                return false;
             }
-            
-            estado = matriz[estado][col];
-            
-            if(estado == 6){ // Estado de error
+
+            estado = matrizJuego[estado][columna];
+
+            if(estado== 6){
                 return false;
             }
         }
-        
-        return estado == 5; // Solo válido si terminó en estado 5 (juego completo)
-    }
-}//class//class
+        return estado == 5;
+    }//Palabra
+}
