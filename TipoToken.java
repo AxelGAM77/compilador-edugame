@@ -1,0 +1,4 @@
+public enum TipoToken {
+    RESERVADA, IDENTIFICADOR, NUMERO, TEXTO, OPERADOR,
+    DELIMITADOR; 
+}
