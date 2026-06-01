@@ -60,9 +60,11 @@ public class Main extends JFrame {
             "\tFIN\n" +
             "\tACTUALIZAR\n" +
             "\t\tSI\n" +
-            "\t\t\tPULSA $A personaje MOVER 5 IZQUIERDA;\n" +
-            "\t\t\tPULSA $B nombre();\n" +
-            "\t\t\tPULSA $C INTERACTUAR personaje puerta;\n" +
+            "\t\t\tPULSA $A\n" +
+            "\t\t\t\tpersonaje MOVER 5 IZQUIERDA;\n" +
+            "\t\t\t\tnombre();\n" +
+            "\t\t\t\tINTERACTUAR personaje puerta abrir();\n" +
+            "\t\t\tFIN\n" +
             "\t\tFIN\n" +
             "\t\tDIBUJAR\n" +
             "\t\tFIN\n" +
@@ -169,9 +171,10 @@ public class Main extends JFrame {
     private void analizar(ActionEvent e) {
         String codigo = areaCodigoEntrada.getText();
         areaLog.setText("");
+        TablaErrores.limpiar();
 
         if (codigo.trim().isEmpty()) {
-            log("⚠ No hay código para analizar", new Color(200, 150, 0));
+            log("No hay código para analizar", new Color(200, 150, 0));
             return;
         }
 
@@ -190,12 +193,20 @@ public class Main extends JFrame {
                 modeloTabla.addRow(fila);
             }
 
-            log("✓ Tokens generados: " + tokens.size(), new Color(0, 200, 0));
+            log("Tokens generados: " + tokens.size(), new Color(0, 200, 0));
             log("  Tipos: " + contarTipos(tokens), new Color(0, 180, 0));
+
+            // Mostrar advertencias léxicas
+            List<ErrorInfo> advertenciasLex = TablaErrores.obtenerErroresPorTipo(ErrorInfo.TipoError.ADVERTENCIA);
+            for (ErrorInfo err : advertenciasLex) {
+                log("Línea " + err.getFila() + ": " + err.getMensaje() +
+                    (err.tieneSugerencia() ? " → " + err.getSugerencia() : ""), new Color(255, 200, 0));
+            }
 
         } catch (Exception ex) {
             log("✗ Error léxico: " + ex.getMessage(), new Color(255, 60, 60));
-            etiquetaEstado.setText("✗ Error léxico");
+            mostrarErroresTabla();
+            etiquetaEstado.setText("Error léxico");
             etiquetaEstado.setForeground(new Color(200, 0, 0));
             return;
         }
@@ -232,8 +243,27 @@ public class Main extends JFrame {
 
         } catch (Exception ex) {
             log("✗ Error sintáctico: " + ex.getMessage(), new Color(255, 60, 60));
+            mostrarErroresTabla();
             etiquetaEstado.setText("✗ Error sintáctico");
             etiquetaEstado.setForeground(new Color(200, 0, 0));
+        }
+    }
+
+    private void mostrarErroresTabla() {
+        List<ErrorInfo> errores = TablaErrores.obtenerErrores();
+        if (!errores.isEmpty()) {
+            log("", Color.WHITE);
+            log("═══ ERRORES ENCONTRADOS ═══", new Color(255, 80, 80));
+            for (ErrorInfo err : errores) {
+                Color c = err.getTipo() == ErrorInfo.TipoError.ADVERTENCIA ? new Color(255, 200, 0) : new Color(255, 80, 80);
+                log("  " + " [" + err.getTipo() + "] Línea " + err.getFila() + ": " + err.getMensaje(), c);
+                if (err.tieneSugerencia()) {
+                    log("    → " + err.getSugerencia(), new Color(255, 180, 0));
+                }
+            }
+            log("", Color.WHITE);
+            int errs = TablaErrores.cantidadErrores() - TablaErrores.cantidadAdvertencias();
+            log("  Total: " + errs + " error(es), " + TablaErrores.cantidadAdvertencias() + " advertencia(s)", new Color(200, 200, 200));
         }
     }
 

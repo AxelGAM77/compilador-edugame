@@ -13,7 +13,6 @@ public class Automata {
     }
 
     private void inicializar(){
-   
         //obtener las letras de la palabra
         for(char c : palabra.toCharArray()){
             if(!letras.contains(c)) letras.add(c);

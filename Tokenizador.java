@@ -88,8 +88,18 @@ public class Tokenizador {
         }
 
         String lexema = palabra.toString();
-        TipoToken tipo = esReservada(lexema) ? TipoToken.RESERVADA : TipoToken.IDENTIFICADOR;
-        tokens.add(new Token(tipo, lexema, fila, colInicio));
+        if (esReservada(lexema)) {
+            tokens.add(new Token(TipoToken.RESERVADA, lexema, fila, colInicio));
+        } else {
+            // Buscar sugerencia si parece una reservada mal escrita
+            String sugerencia = TablaErrores.buscarSugerencia(lexema);
+            if (sugerencia != null) {
+                TablaErrores.agregarError(ErrorInfo.TipoError.ADVERTENCIA,
+                    "'" + lexema + "' no es una palabra reservada",
+                    "¿Quisiste decir '" + sugerencia + "'?", fila, colInicio);
+            }
+            tokens.add(new Token(TipoToken.IDENTIFICADOR, lexema, fila, colInicio));
+        }
     }
 
     private void extraerString(char delimitador) {
@@ -129,7 +139,11 @@ public class Tokenizador {
         if (TablaSimbolos.obtenerTeclaId(nombreTecla) >= 0) {
             tokens.add(new Token(TipoToken.TECLA, nombreTecla, fila, colInicio));
         } else {
-            throw new RuntimeException("Tecla no reconocida: $" + nombreTecla +
+            String sugerencia = TablaErrores.buscarSugerenciaTecla(nombreTecla);
+            String msg = "Tecla no reconocida: $" + nombreTecla;
+            String sug = sugerencia != null ? "¿Quisiste decir $" + sugerencia + "?" : null;
+            TablaErrores.agregarError(ErrorInfo.TipoError.LEXICO, msg, sug, fila, colInicio);
+            throw new RuntimeException(msg + (sug != null ? " (" + sug + ")" : "") +
                     " en fila " + fila + ", columna " + colInicio);
         }
     }

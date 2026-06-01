@@ -27,7 +27,7 @@ public class ParserSintactico {
     private List<ReglaTransicion> tablaFuncion;
     private List<ReglaTransicion> tablaBloqueSI;
     private List<ReglaTransicion> tablaBloqueDIBUJAR;
-    private List<ReglaTransicion> tablaPulsa;
+    private List<ReglaTransicion> tablaBloquePULSA;
     private List<ReglaTransicion> tablaExpresion;
 
     private List<Token> tokens;
@@ -40,7 +40,6 @@ public class ParserSintactico {
     }
 
     private void inicializarAutomas() {
-        // Declaración: Tipo Ident [= Expr] ;
         tablaDeclaracion = new ArrayList<>();
         tablaDeclaracion.add(new ReglaTransicion(0, "RESERVADA", 1));
         tablaDeclaracion.add(new ReglaTransicion(0, "IDENTIFICADOR", 1));
@@ -50,14 +49,12 @@ public class ParserSintactico {
         tablaDeclaracion.add(new ReglaTransicion(3, "*", 4));
         tablaDeclaracion.add(new ReglaTransicion(4, "DELIMITADOR", ";", 5));
 
-        // Asignación: Id = Expr ;
         tablaAsignacion = new ArrayList<>();
         tablaAsignacion.add(new ReglaTransicion(0, "IDENTIFICADOR", 1));
         tablaAsignacion.add(new ReglaTransicion(1, "OPERADOR", "=", 2));
         tablaAsignacion.add(new ReglaTransicion(2, "*", 3));
         tablaAsignacion.add(new ReglaTransicion(3, "DELIMITADOR", ";", 4));
 
-        // LlamadaFunción: Id ( [args] ) ;
         tablaLlamadaFuncion = new ArrayList<>();
         tablaLlamadaFuncion.add(new ReglaTransicion(0, "IDENTIFICADOR", 1));
         tablaLlamadaFuncion.add(new ReglaTransicion(1, "DELIMITADOR", "(", 2));
@@ -66,7 +63,6 @@ public class ParserSintactico {
         tablaLlamadaFuncion.add(new ReglaTransicion(3, "DELIMITADOR", ")", 4));
         tablaLlamadaFuncion.add(new ReglaTransicion(4, "DELIMITADOR", ";", 5));
 
-        // Función: FUNCION [TipoRet] Nombre ( [Params] ) Cuerpo FIN
         tablaFuncion = new ArrayList<>();
         tablaFuncion.add(new ReglaTransicion(0, "RESERVADA", "FUNCION", 1));
         tablaFuncion.add(new ReglaTransicion(1, "IDENTIFICADOR", 2));
@@ -81,7 +77,6 @@ public class ParserSintactico {
         tablaFuncion.add(new ReglaTransicion(6, "*", 7));
         tablaFuncion.add(new ReglaTransicion(7, "RESERVADA", "FIN", 8));
 
-        // BloqueSI: SI ( Expr ) PULSA... FIN  o  SI PULSA... FIN
         tablaBloqueSI = new ArrayList<>();
         tablaBloqueSI.add(new ReglaTransicion(0, "RESERVADA", "SI", 1));
         tablaBloqueSI.add(new ReglaTransicion(1, "DELIMITADOR", "(", 2));
@@ -91,23 +86,18 @@ public class ParserSintactico {
         tablaBloqueSI.add(new ReglaTransicion(4, "RESERVADA", "PULSA", 5));
         tablaBloqueSI.add(new ReglaTransicion(5, "RESERVADA", "FIN", 6));
 
-        // BloqueDIBUJAR: DIBUJAR [instrucciones] FIN
         tablaBloqueDIBUJAR = new ArrayList<>();
         tablaBloqueDIBUJAR.add(new ReglaTransicion(0, "RESERVADA", "DIBUJAR", 1));
         tablaBloqueDIBUJAR.add(new ReglaTransicion(1, "RESERVADA", "FIN", 3));
         tablaBloqueDIBUJAR.add(new ReglaTransicion(1, "*", 2));
         tablaBloqueDIBUJAR.add(new ReglaTransicion(2, "RESERVADA", "FIN", 3));
 
-        // Pulsa: PULSA $Tecla Accion ;
-        tablaPulsa = new ArrayList<>();
-        tablaPulsa.add(new ReglaTransicion(0, "RESERVADA", "PULSA", 1));
-        tablaPulsa.add(new ReglaTransicion(1, "TECLA", 2));
-        tablaPulsa.add(new ReglaTransicion(2, "RESERVADA", "MOVER", 3));
-        tablaPulsa.add(new ReglaTransicion(2, "RESERVADA", "INTERACTUAR", 3));
-        tablaPulsa.add(new ReglaTransicion(2, "IDENTIFICADOR", 3));
-        tablaPulsa.add(new ReglaTransicion(3, "DELIMITADOR", ";", 4));
+        tablaBloquePULSA = new ArrayList<>();
+        tablaBloquePULSA.add(new ReglaTransicion(0, "RESERVADA", "PULSA", 1));
+        tablaBloquePULSA.add(new ReglaTransicion(1, "TECLA", 2));
+        tablaBloquePULSA.add(new ReglaTransicion(2, "*", 3));
+        tablaBloquePULSA.add(new ReglaTransicion(3, "RESERVADA", "FIN", 4));
 
-        // Expresión: valor [op expr]
         tablaExpresion = new ArrayList<>();
         tablaExpresion.add(new ReglaTransicion(0, "NUMERO", 1));
         tablaExpresion.add(new ReglaTransicion(0, "TEXTO", 1));
@@ -123,20 +113,14 @@ public class ParserSintactico {
     private boolean verificarTransicion(ReglaTransicion regla) {
         Token tok = actual();
         if (tok == null) return false;
-        if (!regla.tipoToken.equals("*") && !tok.getTipo().toString().equals(regla.tipoToken)) {
-            return false;
-        }
-        if (regla.lexemaEsperado != null && !tok.getLexema().equals(regla.lexemaEsperado)) {
-            return false;
-        }
+        if (!regla.tipoToken.equals("*") && !tok.getTipo().toString().equals(regla.tipoToken)) return false;
+        if (regla.lexemaEsperado != null && !tok.getLexema().equals(regla.lexemaEsperado)) return false;
         return true;
     }
 
     private int buscarTransicion(List<ReglaTransicion> tabla, int estadoActual) {
         for (ReglaTransicion regla : tabla) {
-            if (regla.estadoActual == estadoActual && verificarTransicion(regla)) {
-                return regla.nuevoEstado;
-            }
+            if (regla.estadoActual == estadoActual && verificarTransicion(regla)) return regla.nuevoEstado;
         }
         return -1;
     }
@@ -159,6 +143,21 @@ public class ParserSintactico {
         return tipoOk && tok.getLexema().equals(lexema);
     }
 
+    private void errorSintactico(String mensaje) {
+        Token tok = actual();
+        int fila = tok != null ? tok.getFila() : 0;
+        int col = tok != null ? tok.getColumna() : 0;
+
+        String sugerencia = null;
+        if (tok != null && tok.getTipo() == TipoToken.IDENTIFICADOR) {
+            sugerencia = TablaErrores.buscarSugerencia(tok.getLexema());
+            if (sugerencia != null) sugerencia = "¿Quisiste decir '" + sugerencia + "'?";
+        }
+
+        TablaErrores.agregarError(ErrorInfo.TipoError.SINTACTICO, mensaje, sugerencia, fila, col);
+        throw new RuntimeException(mensaje + (sugerencia != null ? " (" + sugerencia + ")" : "") + ", fila: " + fila);
+    }
+
     private boolean esTipoDato(String lexema) {
         return TablaSimbolos.esTipoDato(lexema);
     }
@@ -179,9 +178,7 @@ public class ParserSintactico {
         Token tok = actual();
         if (tok == null) return false;
         if (tok.getTipo() == TipoToken.NUMERO || tok.getTipo() == TipoToken.TEXTO ||
-            tok.getTipo() == TipoToken.IDENTIFICADOR || tok.getTipo() == TipoToken.TECLA) {
-            return true;
-        }
+            tok.getTipo() == TipoToken.IDENTIFICADOR || tok.getTipo() == TipoToken.TECLA) return true;
         if (tok.getTipo() == TipoToken.DELIMITADOR && tok.getLexema().equals("(")) return true;
         if (tok.getTipo() == TipoToken.RESERVADA && tok.getLexema().equals("Nuevo")) return true;
         return false;
@@ -192,24 +189,16 @@ public class ParserSintactico {
     public NodoAST parsear() {
         NodoAST programa = new NodoAST("Programa");
 
-        if (!coincidir("RESERVADA", "JUEGO")) {
-            throw new RuntimeException("Se esperaba 'JUEGO' al inicio, fila: " +
-                (actual() != null ? actual().getFila() : "fin"));
-        }
+        if (!coincidir("RESERVADA", "JUEGO")) errorSintactico("Se esperaba 'JUEGO' al inicio del programa");
         consumir();
 
-        if (!coincidir("IDENTIFICADOR", null)) {
-            throw new RuntimeException("Se esperaba identificador después de 'JUEGO', fila: " +
-                (actual() != null ? actual().getFila() : "fin"));
-        }
+        if (!coincidir("IDENTIFICADOR", null)) errorSintactico("Se esperaba identificador después de 'JUEGO'");
 
         programa.agregarHijo(parsearJuego());
 
         while (posicion < tokens.size() && coincidir("RESERVADA", "JUEGO")) {
             consumir();
-            if (!coincidir("IDENTIFICADOR", null)) {
-                throw new RuntimeException("Se esperaba identificador después de 'JUEGO'");
-            }
+            if (!coincidir("IDENTIFICADOR", null)) errorSintactico("Se esperaba identificador después de 'JUEGO'");
             programa.agregarHijo(parsearJuego());
         }
 
@@ -224,9 +213,7 @@ public class ParserSintactico {
         juego.agregarHijo(new NodoAST("Identificador", nombre.getLexema()));
 
         // INICIAR
-        if (!coincidir("RESERVADA", "INICIAR")) {
-            throw new RuntimeException("Se esperaba 'INICIAR' en JUEGO, fila: " + nombre.getFila());
-        }
+        if (!coincidir("RESERVADA", "INICIAR")) errorSintactico("Se esperaba 'INICIAR' en JUEGO");
         consumir();
         NodoAST iniciar = new NodoAST("INICIAR");
         while (posicion < tokens.size() && !coincidir("RESERVADA", "FIN") && !coincidir("RESERVADA", "ACTUALIZAR")) {
@@ -236,16 +223,12 @@ public class ParserSintactico {
                 break;
             }
         }
-        if (!coincidir("RESERVADA", "FIN")) {
-            throw new RuntimeException("Se esperaba 'FIN' después de INICIAR, fila: " + actual().getFila());
-        }
+        if (!coincidir("RESERVADA", "FIN")) errorSintactico("Se esperaba 'FIN' después de INICIAR");
         consumir();
         juego.agregarHijo(iniciar);
 
         // ACTUALIZAR
-        if (!coincidir("RESERVADA", "ACTUALIZAR")) {
-            throw new RuntimeException("Se esperaba 'ACTUALIZAR' en JUEGO, fila: " + actual().getFila());
-        }
+        if (!coincidir("RESERVADA", "ACTUALIZAR")) errorSintactico("Se esperaba 'ACTUALIZAR' en JUEGO");
         consumir();
         NodoAST actualizar = new NodoAST("ACTUALIZAR");
         while (posicion < tokens.size() && !coincidir("RESERVADA", "FIN")) {
@@ -253,15 +236,15 @@ public class ParserSintactico {
                 actualizar.agregarHijo(parsearBloqueSI());
             } else if (coincidir("RESERVADA", "DIBUJAR")) {
                 actualizar.agregarHijo(parsearBloqueDIBUJAR());
+            } else if (coincidir("RESERVADA", "PULSA")) {
+                actualizar.agregarHijo(parsearBloquePULSA());
             } else if (esInicioStatement()) {
                 actualizar.agregarHijo(parsearStatement());
             } else {
                 break;
             }
         }
-        if (!coincidir("RESERVADA", "FIN")) {
-            throw new RuntimeException("Se esperaba 'FIN' después de ACTUALIZAR, fila: " + actual().getFila());
-        }
+        if (!coincidir("RESERVADA", "FIN")) errorSintactico("Se esperaba 'FIN' después de ACTUALIZAR");
         consumir();
         juego.agregarHijo(actualizar);
 
@@ -270,9 +253,7 @@ public class ParserSintactico {
             juego.agregarHijo(parsearFuncion());
         }
 
-        if (!coincidir("RESERVADA", "FIN")) {
-            throw new RuntimeException("Se esperaba 'FIN' para cerrar JUEGO, fila: " + actual().getFila());
-        }
+        if (!coincidir("RESERVADA", "FIN")) errorSintactico("Se esperaba 'FIN' para cerrar JUEGO");
         consumir();
 
         return juego;
@@ -284,49 +265,50 @@ public class ParserSintactico {
         NodoAST funcion = new NodoAST("Funcion");
         consumir(); // FUNCION
 
-        if (!coincidir("IDENTIFICADOR", null) && !esTipoDato(actual().getLexema())) {
-            throw new RuntimeException("Se esperaba nombre de función o tipo de retorno, fila: " + actual().getFila());
-        }
-
-        // Tipo retorno opcional
         boolean tieneTipoRetorno = false;
-        if (posicion + 1 < tokens.size() &&
-            (tokens.get(posicion + 1).getTipo() == TipoToken.IDENTIFICADOR ||
-             esTipoDato(tokens.get(posicion + 1).getLexema()))) {
-            Token tipoRet = consumir();
-            funcion.agregarHijo(new NodoAST("TipoRetorno", tipoRet.getLexema()));
+        String tipoRetorno = null;
+
+        if (actual() != null && esTipoDato(actual().getLexema())) {
+            tipoRetorno = actual().getLexema();
+            consumir();
             tieneTipoRetorno = true;
+            funcion.agregarHijo(new NodoAST("TipoRetorno", tipoRetorno));
+        } else if (actual() != null && actual().getLexema().equals("VACIA")) {
+            consumir();
+            funcion.agregarHijo(new NodoAST("TipoRetorno", "VACIA"));
         }
 
+        if (!coincidir("IDENTIFICADOR", null)) errorSintactico("Se esperaba nombre de función");
         Token nombreFunc = consumir();
         funcion.agregarHijo(new NodoAST("NombreFuncion", nombreFunc.getLexema()));
 
-        if (!coincidir("DELIMITADOR", "(")) {
-            throw new RuntimeException("Se esperaba '(' después del nombre de función, fila: " + actual().getFila());
-        }
+        if (!coincidir("DELIMITADOR", "(")) errorSintactico("Se esperaba '(' después del nombre de función");
         consumir();
 
         NodoAST params = new NodoAST("Parametros");
         while (!coincidir("DELIMITADOR", ")")) {
             if (params.getHijos().size() > 0) {
-                if (!coincidir("DELIMITADOR", ",")) {
-                    throw new RuntimeException("Se esperaba ',' entre parámetros, fila: " + actual().getFila());
-                }
+                if (!coincidir("DELIMITADOR", ",")) errorSintactico("Se esperaba ',' entre parámetros");
                 consumir();
             }
             if (actual() != null && (actual().getTipo() == TipoToken.IDENTIFICADOR || esTipoDato(actual().getLexema()))) {
-                params.agregarHijo(new NodoAST("Parametro", consumir().getLexema()));
+                NodoAST param = new NodoAST("Parametro");
+                Token tipoOId = consumir();
+                if (actual() != null && actual().getTipo() == TipoToken.IDENTIFICADOR) {
+                    param.agregarHijo(new NodoAST("Tipo", tipoOId.getLexema()));
+                    param.agregarHijo(new NodoAST("Nombre", consumir().getLexema()));
+                } else {
+                    param.agregarHijo(new NodoAST("Nombre", tipoOId.getLexema()));
+                }
+                params.agregarHijo(param);
             } else {
                 break;
             }
         }
-        if (!coincidir("DELIMITADOR", ")")) {
-            throw new RuntimeException("Se esperaba ')' en parámetros, fila: " + actual().getFila());
-        }
+        if (!coincidir("DELIMITADOR", ")")) errorSintactico("Se esperaba ')' en parámetros");
         consumir();
         funcion.agregarHijo(params);
 
-        // Cuerpo
         NodoAST cuerpo = new NodoAST("CuerpoFuncion");
         boolean tieneRegresar = false;
         while (posicion < tokens.size() && !coincidir("RESERVADA", "FIN")) {
@@ -336,21 +318,17 @@ public class ParserSintactico {
             } else if (esInicioStatement()) {
                 cuerpo.agregarHijo(parsearStatement());
             } else {
-                throw new RuntimeException("Token inesperado en función: " + actual().getLexema() +
-                    ", fila: " + actual().getFila());
+                errorSintactico("Token inesperado en función: " + actual().getLexema());
             }
         }
 
-        // Si tiene tipo de retorno, REGRESAR es obligatorio
         if (tieneTipoRetorno && !tieneRegresar) {
-            throw new RuntimeException("La función '" + nombreFunc.getLexema() +
-                "' tiene tipo de retorno '" + funcion.getHijos().get(0).getValor() +
-                "' pero no tiene REGRESAR, fila: " + nombreFunc.getFila());
+            errorSintactico("La función '" + nombreFunc.getLexema() +
+                "' tiene tipo de retorno '" + tipoRetorno +
+                "' pero no tiene REGRESAR");
         }
 
-        if (!coincidir("RESERVADA", "FIN")) {
-            throw new RuntimeException("Se esperaba 'FIN' para cerrar función, fila: " + actual().getFila());
-        }
+        if (!coincidir("RESERVADA", "FIN")) errorSintactico("Se esperaba 'FIN' para cerrar función");
         consumir();
         funcion.agregarHijo(cuerpo);
 
@@ -378,19 +356,15 @@ public class ParserSintactico {
         if (coincidir("DELIMITADOR", "(")) {
             consumir();
             si.agregarHijo(parsearExpresion());
-            if (!coincidir("DELIMITADOR", ")")) {
-                throw new RuntimeException("Se esperaba ')' en SI");
-            }
+            if (!coincidir("DELIMITADOR", ")")) errorSintactico("Se esperaba ')' en SI");
             consumir();
         }
 
         while (posicion < tokens.size() && coincidir("RESERVADA", "PULSA")) {
-            si.agregarHijo(parsearPulsa());
+            si.agregarHijo(parsearBloquePULSA());
         }
 
-        if (!coincidir("RESERVADA", "FIN")) {
-            throw new RuntimeException("Se esperaba 'FIN' para cerrar SI, fila: " + actual().getFila());
-        }
+        if (!coincidir("RESERVADA", "FIN")) errorSintactico("Se esperaba 'FIN' para cerrar SI");
         consumir();
         return si;
     }
@@ -405,84 +379,120 @@ public class ParserSintactico {
             if (esInicioStatement()) {
                 dibujar.agregarHijo(parsearStatement());
             } else {
-                throw new RuntimeException("Token inesperado en DIBUJAR: " + actual().getLexema() +
-                    ", fila: " + actual().getFila());
+                errorSintactico("Token inesperado en DIBUJAR: " + actual().getLexema());
             }
         }
-        if (!coincidir("RESERVADA", "FIN")) {
-            throw new RuntimeException("Se esperaba 'FIN' para cerrar DIBUJAR, fila: " + actual().getFila());
-        }
+        if (!coincidir("RESERVADA", "FIN")) errorSintactico("Se esperaba 'FIN' para cerrar DIBUJAR");
         consumir();
         return dibujar;
     }
 
-    // ==================== PULSA ====================
+    // ==================== BLOQUE PULSA ====================
+    // PULSA $Tecla
+    //     acciones...
+    // FIN
 
-    private NodoAST parsearPulsa() {
+    private NodoAST parsearBloquePULSA() {
         NodoAST pulsa = new NodoAST("PULSA");
         consumir(); // PULSA
 
-        if (!coincidir("TECLA", null)) {
-            throw new RuntimeException("Se esperaba tecla ($X) después de PULSA, fila: " + actual().getFila());
-        }
+        if (!coincidir("TECLA", null)) errorSintactico("Se esperaba tecla ($X) después de PULSA");
         Token tecla = consumir();
         pulsa.agregarHijo(new NodoAST("Tecla", tecla.getLexema()));
 
-        if (coincidir("RESERVADA", "MOVER")) {
-            consumir();
-            NodoAST accion = new NodoAST("AccionMover");
-            if (coincidir("NUMERO", null)) {
-                accion.agregarHijo(new NodoAST("Cantidad", consumir().getLexema()));
-            }
-            if (actual() != null && (coincidir("RESERVADA", "IZQUIERDA") || coincidir("RESERVADA", "DERECHA") ||
-                coincidir("RESERVADA", "ARRIBA") || coincidir("RESERVADA", "ABAJO"))) {
-                accion.agregarHijo(new NodoAST("Direccion", consumir().getLexema()));
-            }
-            pulsa.agregarHijo(accion);
-        } else if (coincidir("RESERVADA", "INTERACTUAR")) {
-            consumir();
-            NodoAST accion = new NodoAST("AccionInteractuar");
-            if (coincidir("IDENTIFICADOR", null)) {
-                accion.agregarHijo(new NodoAST("Objeto1", consumir().getLexema()));
-            }
-            if (coincidir("IDENTIFICADOR", null)) {
-                accion.agregarHijo(new NodoAST("Objeto2", consumir().getLexema()));
-            }
-            pulsa.agregarHijo(accion);
-        } else if (coincidir("IDENTIFICADOR", null)) {
-            if (posicion + 1 < tokens.size() && tokens.get(posicion + 1).getLexema().equals("(")) {
-                pulsa.agregarHijo(parsearLlamadaFuncion());
-            } else {
-                Token id = consumir();
-                NodoAST accion = new NodoAST("AccionGeneral");
-                accion.agregarHijo(new NodoAST("Objeto", id.getLexema()));
-                if (coincidir("RESERVADA", "MOVER")) {
-                    consumir();
-                    if (coincidir("NUMERO", null)) {
-                        accion.agregarHijo(new NodoAST("Cantidad", consumir().getLexema()));
-                    }
-                    if (actual() != null && (coincidir("RESERVADA", "IZQUIERDA") || coincidir("RESERVADA", "DERECHA") ||
-                        coincidir("RESERVADA", "ARRIBA") || coincidir("RESERVADA", "ABAJO"))) {
-                        accion.agregarHijo(new NodoAST("Direccion", consumir().getLexema()));
-                    }
-                }
-                pulsa.agregarHijo(accion);
-            }
+        while (posicion < tokens.size() && !coincidir("RESERVADA", "FIN")) {
+            pulsa.agregarHijo(parsearAccionPulsa());
+        }
+
+        if (!coincidir("RESERVADA", "FIN")) errorSintactico("Se esperaba 'FIN' para cerrar PULSA");
+        consumir();
+        return pulsa;
+    }
+
+    // ==================== ACCIÓN DENTRO DE PULSA ====================
+
+    private NodoAST parsearAccionPulsa() {
+        Token tok = actual();
+        if (tok == null) errorSintactico("Token inesperado: fin de entrada");
+
+        // obj MOVER cantidad DIR
+        if (tok.getTipo() == TipoToken.IDENTIFICADOR && posicion + 1 < tokens.size() &&
+            tokens.get(posicion + 1).getLexema().equals("MOVER")) {
+            return parsearAccionMover();
+        }
+
+        // INTERACTUAR obj1 obj2
+        if (coincidir("RESERVADA", "INTERACTUAR")) {
+            return parsearAccionInteractuar();
+        }
+
+        // obj();  — llamada a función
+        if (tok.getTipo() == TipoToken.IDENTIFICADOR && posicion + 1 < tokens.size() &&
+            tokens.get(posicion + 1).getLexema().equals("(")) {
+            return parsearLlamadaFuncion();
+        }
+
+        // id = expr;  — asignación
+        if (tok.getTipo() == TipoToken.IDENTIFICADOR && posicion + 1 < tokens.size() &&
+            tokens.get(posicion + 1).getLexema().equals("=")) {
+            return parsearAsignacion();
+        }
+
+        errorSintactico("Acción no válida en PULSA: " + tok.getLexema());
+        return null;
+    }
+
+    // ==================== ACCIÓN MOVER ====================
+
+    private NodoAST parsearAccionMover() {
+        NodoAST accion = new NodoAST("AccionMover");
+        Token obj = consumir(); // identificador
+        accion.agregarHijo(new NodoAST("Objeto", obj.getLexema()));
+
+        consumir(); // MOVER
+
+        if (coincidir("NUMERO", null)) {
+            accion.agregarHijo(new NodoAST("Cantidad", consumir().getLexema()));
+        }
+
+        if (actual() != null && (coincidir("RESERVADA", "IZQUIERDA") || coincidir("RESERVADA", "DERECHA") ||
+            coincidir("RESERVADA", "ARRIBA") || coincidir("RESERVADA", "ABAJO"))) {
+            accion.agregarHijo(new NodoAST("Direccion", consumir().getLexema()));
         }
 
         if (coincidir("DELIMITADOR", ";")) consumir();
-        return pulsa;
+        return accion;
+    }
+
+    // ==================== ACCIÓN INTERACTUAR ====================
+
+    private NodoAST parsearAccionInteractuar() {
+        NodoAST accion = new NodoAST("INTERACTUAR");
+        consumir(); // INTERACTUAR
+
+        if (coincidir("IDENTIFICADOR", null)) {
+            accion.agregarHijo(new NodoAST("identificador", consumir().getLexema()));
+        }
+        if (coincidir("IDENTIFICADOR", null)) {
+            accion.agregarHijo(new NodoAST("identificador", consumir().getLexema()));
+        }
+        if (coincidir("IDENTIFICADOR", null)) {
+            accion.agregarHijo(parsearLlamadaFuncion());
+        }
+
+        if (coincidir("DELIMITADOR", ";")) consumir();
+        return accion;
     }
 
     // ==================== STATEMENT ====================
 
     private NodoAST parsearStatement() {
         Token tok = actual();
-        if (tok == null) throw new RuntimeException("Token inesperado: fin de entrada");
+        if (tok == null) errorSintactico("Token inesperado: fin de entrada");
 
         if (coincidir("RESERVADA", "SI")) return parsearBloqueSI();
         if (coincidir("RESERVADA", "DIBUJAR")) return parsearBloqueDIBUJAR();
-        if (coincidir("RESERVADA", "PULSA")) return parsearPulsa();
+        if (coincidir("RESERVADA", "PULSA")) return parsearBloquePULSA();
         if (coincidir("RESERVADA", "REGRESAR")) return parsearReturn();
 
         if (tok.getTipo() == TipoToken.RESERVADA && esTipoDato(tok.getLexema())) {
@@ -495,11 +505,12 @@ public class ParserSintactico {
             } else if (posicion + 1 < tokens.size() && tokens.get(posicion + 1).getLexema().equals("(")) {
                 return parsearLlamadaFuncion();
             } else {
-                throw new RuntimeException("Sentencia no válida: " + tok.getLexema() + ", fila: " + tok.getFila());
+                errorSintactico("Sentencia no válida: " + tok.getLexema());
             }
         }
 
-        throw new RuntimeException("Token inesperado: " + tok.getLexema() + ", fila: " + tok.getFila());
+        errorSintactico("Token inesperado: " + tok.getLexema());
+        return null;
     }
 
     // ==================== DECLARACIÓN ====================
@@ -509,9 +520,7 @@ public class ParserSintactico {
         Token tipo = consumir();
         decl.agregarHijo(new NodoAST("Tipo", tipo.getLexema()));
 
-        if (!coincidir("IDENTIFICADOR", null)) {
-            throw new RuntimeException("Se esperaba identificador en declaración, fila: " + tipo.getFila());
-        }
+        if (!coincidir("IDENTIFICADOR", null)) errorSintactico("Se esperaba identificador en declaración");
         Token id = consumir();
         decl.agregarHijo(new NodoAST("Identificador", id.getLexema()));
 
@@ -531,9 +540,7 @@ public class ParserSintactico {
         Token id = consumir();
         asig.agregarHijo(new NodoAST("Identificador", id.getLexema()));
 
-        if (!coincidir("OPERADOR", "=")) {
-            throw new RuntimeException("Se esperaba '=' en asignación, fila: " + id.getFila());
-        }
+        if (!coincidir("OPERADOR", "=")) errorSintactico("Se esperaba '=' en asignación");
         consumir();
 
         asig.agregarHijo(parsearExpresion());
@@ -548,9 +555,7 @@ public class ParserSintactico {
         Token id = consumir();
         llamada.agregarHijo(new NodoAST("NombreFuncion", id.getLexema()));
 
-        if (!coincidir("DELIMITADOR", "(")) {
-            throw new RuntimeException("Se esperaba '(' en llamada, fila: " + id.getFila());
-        }
+        if (!coincidir("DELIMITADOR", "(")) errorSintactico("Se esperaba '(' en llamada a función");
         consumir();
 
         NodoAST args = new NodoAST("Argumentos");
@@ -561,9 +566,7 @@ public class ParserSintactico {
                 args.agregarHijo(parsearExpresion());
             }
         }
-        if (!coincidir("DELIMITADOR", ")")) {
-            throw new RuntimeException("Se esperaba ')' en llamada, fila: " + actual().getFila());
-        }
+        if (!coincidir("DELIMITADOR", ")")) errorSintactico("Se esperaba ')' en llamada a función");
         consumir();
         llamada.agregarHijo(args);
 
@@ -577,9 +580,7 @@ public class ParserSintactico {
         NodoAST expr = new NodoAST("Expresion");
         Token tok = actual();
 
-        if (tok == null) {
-            throw new RuntimeException("Se esperaba expresión, fin de entrada");
-        }
+        if (tok == null) errorSintactico("Se esperaba expresión, fin de entrada");
 
         if (tok.getTipo() == TipoToken.NUMERO) {
             consumir();
@@ -591,7 +592,7 @@ public class ParserSintactico {
             consumir();
             expr.agregarHijo(new NodoAST("Tecla", tok.getLexema()));
         } else if (tok.getTipo() == TipoToken.RESERVADA && tok.getLexema().equals("Nuevo")) {
-            consumir(); // Nuevo
+            consumir();
             if (coincidir("IDENTIFICADOR", null) || (coincidir("RESERVADA", null) && esTipoDato(actual().getLexema()))) {
                 Token tipoConstructor = consumir();
                 NodoAST constructor = new NodoAST("Constructor", tipoConstructor.getLexema());
@@ -605,9 +606,7 @@ public class ParserSintactico {
                             args.agregarHijo(parsearExpresion());
                         }
                     }
-                    if (!coincidir("DELIMITADOR", ")")) {
-                        throw new RuntimeException("Se esperaba ')' en constructor, fila: " + actual().getFila());
-                    }
+                    if (!coincidir("DELIMITADOR", ")")) errorSintactico("Se esperaba ')' en constructor");
                     consumir();
                     constructor.agregarHijo(args);
                 }
@@ -625,7 +624,7 @@ public class ParserSintactico {
             expr.agregarHijo(parsearExpresion());
             if (coincidir("DELIMITADOR", ")")) consumir();
         } else {
-            throw new RuntimeException("Expresión inesperada: " + tok.getLexema() + ", fila: " + tok.getFila());
+            errorSintactico("Expresión inesperada: " + tok.getLexema());
         }
 
         if (actual() != null && actual().getTipo() == TipoToken.OPERADOR &&
@@ -645,9 +644,7 @@ public class ParserSintactico {
     public static String generarTextoAST(NodoAST nodo, String prefijo, boolean esUltimo) {
         StringBuilder sb = new StringBuilder();
         sb.append(prefijo).append(esUltimo ? "└── " : "├── ").append(nodo.getTipo());
-        if (nodo.getValor() != null) {
-            sb.append(": ").append(nodo.getValor());
-        }
+        if (nodo.getValor() != null) sb.append(": ").append(nodo.getValor());
         sb.append("\n");
 
         List<NodoAST> hijos = nodo.getHijos();
