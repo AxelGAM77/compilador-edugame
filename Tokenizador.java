@@ -50,6 +50,12 @@ public class Tokenizador {
                 continue;
             }
 
+            // Detectar teclas ($ seguido de nombre de tecla)
+            if (actual == '$') {
+                extraerTecla();
+                continue;
+            }
+
             // Detectar operadores y delimitadores
             extraerOperadorDelimitador();
         }
@@ -106,6 +112,28 @@ public class Tokenizador {
         tokens.add(new Token(TipoToken.TEXTO, contenido.toString(), fila, colInicio));
     }
 
+    private void extraerTecla() {
+        int colInicio = columna;
+        posicion++; // Saltar el $
+        columna++;
+
+        StringBuilder tecla = new StringBuilder();
+        while (posicion < entrada.length() &&
+                (Character.isLetterOrDigit(entrada.charAt(posicion)))) {
+            tecla.append(entrada.charAt(posicion));
+            posicion++;
+            columna++;
+        }
+
+        String nombreTecla = tecla.toString();
+        if (TablaSimbolos.obtenerTeclaId(nombreTecla) >= 0) {
+            tokens.add(new Token(TipoToken.TECLA, nombreTecla, fila, colInicio));
+        } else {
+            throw new RuntimeException("Tecla no reconocida: $" + nombreTecla +
+                    " en fila " + fila + ", columna " + colInicio);
+        }
+    }
+
     private void extraerOperadorDelimitador() {
         int colInicio = columna;
         char actual = entrada.charAt(posicion);
@@ -129,7 +157,7 @@ public class Tokenizador {
 
     private boolean esReservada(String palabra) {
         for (String lexema : TablaSimbolos.LEXEMAS) {
-            if (lexema.equalsIgnoreCase(palabra)) {
+            if (lexema.equals(palabra)) {
                 return true;
             }
         }
